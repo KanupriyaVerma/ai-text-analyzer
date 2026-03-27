@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Text Analyzer</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 {
+            margin-top: 20px;
+        }
+
+        #chat {
+            width: 60%;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .user, .bot {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 10px;
+            max-width: 80%;
+        }
+
+        .user {
+            background: #22c55e;
+            align-self: flex-end;
+            color: black;
+        }
+
+        .bot {
+            background: #334155;
+        }
+
+        textarea {
+            width: 60%;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .positive { color: #22c55e; }
+        .negative { color: #ef4444; }
+        .neutral { color: #facc15; }
+
+    </style>
+</head>
+<body>
+
+<h2>🤖 AI Text Analyzer</h2>
+
+<p style="color: #94a3b8;">
+Analyze your thoughts with AI-style insights — summary, sentiment, and suggestions.
+</p>
+
+<div id="chat"></div>
+
+<textarea id="inputText" rows="3" placeholder="Type or speak..."></textarea><br>
+
+<button id="analyzeBtn" onclick="analyze()">Analyze</button>
+<button onclick="startVoice()">🎤 Speak</button>
+
+<script>
+async function analyze() {
+    const text = document.getElementById("inputText").value.trim();
+    const chat = document.getElementById("chat");
+
+    if (!text) {
+        chat.innerHTML = `<div class="bot">⚠️ Please enter some text first</div>`;
+        return;
+    }
+    const btn = document.getElementById("analyzeBtn");
+
+    // Disable button
+    btn.disabled = true;
+    btn.innerText = "Analyzing...";
+
+    // Clear previous result
+    chat.innerHTML = "";
+
+    chat.innerHTML += `<div class="user">${text}</div>`;
+    chat.innerHTML += `<div class="bot">⏳ Thinking...</div>`;
+
+    const response = await fetch("http://127.0.0.1:5000/analyze", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ text: text })
+    });
+
+    const data = await response.json();
+
+    let sentimentClass = "neutral";
+    if (data.sentiment === "Positive") sentimentClass = "positive";
+    if (data.sentiment === "Negative") sentimentClass = "negative";
+
+    const botReply = `
+        <div class="bot">
+        📝 ${data.summary}<br><br>
+        😊 Sentiment: <span class="${sentimentClass}">${data.sentiment}</span><br><br>
+        💡 ${data.suggestions}<br><br>
+        🔢 Words: ${data.word_count}
+        </div>
+    `;
+
+    chat.innerHTML = `
+        <div class="user">${text}</div>
+        ${botReply}
+    `;
+
+    // Enable button again
+    btn.disabled = false;
+    btn.innerText = "Analyze";
+
+    document.getElementById("inputText").value = "";
+}
+
+// 🎤 Voice input
+function startVoice() {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "en-US";
+
+    recognition.onresult = function(event) {
+        document.getElementById("inputText").value = event.results[0][0].transcript;
+    };
+
+    recognition.start();
+}
+</script>
+
+</body>
+</html>
